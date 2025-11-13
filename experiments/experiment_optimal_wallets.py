@@ -25,12 +25,12 @@ def check_optimal_wallets_over_scenarios():
     reportOptimalWalletsForProbabilities(sample, keyCount=4)
 
 
-def run_grid_and_save_csv(
+def find_optimal_wallets_for_different_key_counts(
         output_csv_path,
         key_counts,
         step=0.05,
         include_zero=False,
-        min_safe=0.5,
+        min_safe=0.1,
         sample_size=None,
 ):
     """Generate scenarios and save pivot CSV: rows=scenarios, cols=keyCounts, cells=wallets.
@@ -75,10 +75,10 @@ def run_grid_and_save_csv(
                     wallet_str = f"[TIE: {len(optimal_wallets)} wallets: {' | '.join(wallet_strs)}]"
                 row.append(f"{wallet_str} (p={best_p:.6f})")
             writer.writerow(row)
-    print(f"Wrote pivot CSV with {len(scenarios)} scenarios and {len(key_counts)} keyCounts to {output_csv_path}")
+    print(f"Wrote CSV with {len(scenarios)} scenarios and {len(key_counts)} keyCounts to {output_csv_path}")
 
 
-def rank_wallets_for_probabilities(
+def rank_wallets_by_success_probability(
         probabilities_list,
         wallets,
         keyCount,
@@ -111,7 +111,7 @@ def rank_wallets_for_probabilities(
         # Compute states once for this probability scenario
         states, state_probabilities = enumerateStates(keyCount, probs)
         ownerStates, advStates = ownerAdvKeysFromStates(states)
-        
+
         # Compute success probability for each wallet under this scenario
         wallet_scores = []
         for wallet in wallets:
@@ -172,18 +172,18 @@ def count_optimal_wallet_occurrences(
     total_scenarios = 0
     unique_scenarios = 0  # Scenarios with unique optimal wallet
     tie_scenarios = 0  # Scenarios with tied optimal wallets
-    
+
     for probs in probabilities_list:
         total_scenarios += 1
         # Find optimal wallets for this probability scenario from the provided wallets
         optimal_wallets, _best_p = findOptimalWallet(wallets, keyCount, probs)
-        
+
         is_tie = len(optimal_wallets) > 1
         if is_tie:
             tie_scenarios += 1
         else:
             unique_scenarios += 1
-        
+
         # Count optimal wallets (track unique vs tied separately)
         for optimal_wallet in optimal_wallets:
             optimal_tuple = tuple(sorted(optimal_wallet))  # Sort for consistent comparison
@@ -200,13 +200,13 @@ def count_optimal_wallet_occurrences(
         unique_count = wallet_unique_counts[wallet_tuple]
         tie_count = wallet_tie_counts[wallet_tuple]
         total_count = unique_count + tie_count
-        
+
         wallet = wallet_to_tuple[wallet_tuple]
         # Calculate percentages based on total scenarios
         unique_percentage = (unique_count / unique_scenarios * 100) if unique_scenarios > 0 else 0.0
         tie_percentage = (tie_count / tie_scenarios * 100) if tie_scenarios > 0 else 0.0
         total_percentage = (total_count / total_scenarios * 100) if total_scenarios > 0 else 0.0
-        
+
         results.append({
             "Wallet": walletStrAscii(wallet),
             "Unique_Count": unique_count,
@@ -216,7 +216,7 @@ def count_optimal_wallet_occurrences(
             "Tie_Percentage": f"{tie_percentage:.2f}%",
             "Total_Percentage": f"{total_percentage:.2f}%",
         })
-    
+
     # Sort by unique count (descending), then by total count as tiebreaker
     results.sort(key=lambda x: (x["Unique_Count"], x["Total_Count"]), reverse=True)
 
@@ -225,7 +225,8 @@ def count_optimal_wallet_occurrences(
         print(f"  Unique optimal: {unique_scenarios} scenarios")
         print(f"  Tied optimal: {tie_scenarios} scenarios")
         print("-" * 100)
-        print(f"{'Wallet':<40s} | {'Unique':<8s} | {'Tied':<8s} | {'Total':<8s} | {'Unique %':<10s} | {'Tied %':<10s} | {'Total %':<10s}")
+        print(
+            f"{'Wallet':<40s} | {'Unique':<8s} | {'Tied':<8s} | {'Total':<8s} | {'Unique %':<10s} | {'Tied %':<10s} | {'Total %':<10s}")
         print("-" * 100)
         for result in results:
             if result["Total_Count"] > 0:  # Only show wallets that were optimal at least once
@@ -240,7 +241,8 @@ def count_optimal_wallet_occurrences(
                 )
 
     if output_csv_path:
-        fieldnames = ["Wallet", "Unique_Count", "Tie_Count", "Total_Count", "Unique_Percentage", "Tie_Percentage", "Total_Percentage"]
+        fieldnames = ["Wallet", "Unique_Count", "Tie_Count", "Total_Count", "Unique_Percentage", "Tie_Percentage",
+                      "Total_Percentage"]
         with open(output_csv_path, mode="w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
@@ -259,29 +261,19 @@ def count_optimal_wallet_occurrences(
 
 
 if __name__ == "__main__":
-    # run_grid_and_save_csv(
-    #     output_csv_path="results_optimal_wallets.csv",
-    #     key_counts=range(2, 5),
-    #     step=0.05,
-    #     include_zero=False,
-    #     min_safe=0.5,
-    #     sample_size=20,
-    # )
-
     step = 0.02
     minsafe = 0.2
 
-    probabilities = generateKeyFaultProbabilityScenarios(step=step, include_zero=False,min_safe=minsafe)
+    probabilities = [{SAFE: 0.3, LOST: 0.26, LEAKED: 0.17, STOLEN: 0.27}]
     print("Generated", len(probabilities), "probability scenarios.")
 
     keyCount = 4
     wallets = enumerateStaticWallets(keyCount, deduplicate_by_architecture=True)
     print("Generated", len(wallets), "wallets for keyCount =", keyCount)
 
-    count_optimal_wallet_occurrences(
+    rank_wallets_by_success_probability(
         probabilities_list=probabilities,
         wallets=wallets,
         keyCount=keyCount,
-        output_csv_path=f"wallet_optimal_counts_{keyCount}_keys_step_{step}_minsafe_{minsafe}_ties_separated.csv",
-        print_results=True,
-    ) 
+        output_csv_path=f"rank_by_probabilty_{keyCount}_keys_step_{step}_minsafe_{minsafe}_ties_separated.csv",
+    )
