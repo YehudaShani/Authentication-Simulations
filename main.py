@@ -6,8 +6,7 @@ from helpers.wallet_enumerations import enumerateStaticWallets
 def main():
     # Configuration
     keyCount = 4
-    num_probabilities = 100000
-    step = 0.0001  # Small step to generate many scenarios
+    step = 0.001  # Small step to generate many scenarios
     min_safe = 0.1
     deduplicate_by_architecture = True
     num_workers = None  # None = auto-detect CPU cores, or set to specific number
@@ -23,14 +22,7 @@ def main():
         min_safe=min_safe,
         num_workers=num_workers
     )
-    
-    # Take the first num_probabilities scenarios if needed
-    if len(all_scenarios) > num_probabilities:
-        probabilities_list = all_scenarios[:num_probabilities]
-        print(f"Using first {len(probabilities_list)} of {len(all_scenarios)} generated scenarios")
-    else:
-        probabilities_list = all_scenarios
-        print(f"Using all {len(probabilities_list)} generated scenarios")
+    probabilities_list = all_scenarios
     
     # Generate wallets
     print(f"\nGenerating wallets for keyCount={keyCount}...")
