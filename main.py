@@ -1,5 +1,5 @@
 from experiments.experiment_optimal_wallets_parallel import count_optimal_wallet_occurrences_parallel
-from helpers.computations import generateKeyFaultProbabilityScenarios
+from helpers.computations_parallel import generateKeyFaultProbabilityScenariosParallel
 from helpers.wallet_enumerations import enumerateStaticWallets
 
 
@@ -13,22 +13,27 @@ def main():
     num_workers = None  # None = auto-detect CPU cores, or set to specific number
     batch_size = 1000  # Number of scenarios per worker batch
     
-    print(f"Generating {num_probabilities} probability scenarios...")
+    print(f"Generating probability scenarios (parallel CPU)...")
     print(f"  step={step}, min_safe={min_safe}, keyCount={keyCount}")
     
-    # Generate probability scenarios
-    all_scenarios = generateKeyFaultProbabilityScenarios(
+    # Generate probability scenarios (parallel version)
+    all_scenarios = generateKeyFaultProbabilityScenariosParallel(
         step=step,
         include_zero=False,
-        min_safe=min_safe
+        min_safe=min_safe,
+        num_workers=num_workers
     )
     
-    # Take the first num_probabilities scenarios
-    probabilities_list = all_scenarios[:num_probabilities]
-    print(f"Using {len(probabilities_list)} probability scenarios")
+    # Take the first num_probabilities scenarios if needed
+    if len(all_scenarios) > num_probabilities:
+        probabilities_list = all_scenarios[:num_probabilities]
+        print(f"Using first {len(probabilities_list)} of {len(all_scenarios)} generated scenarios")
+    else:
+        probabilities_list = all_scenarios
+        print(f"Using all {len(probabilities_list)} generated scenarios")
     
     # Generate wallets
-    print(f"Generating wallets for keyCount={keyCount}...")
+    print(f"\nGenerating wallets for keyCount={keyCount}...")
     wallets = enumerateStaticWallets(
         keyCount, 
         deduplicate_by_architecture=deduplicate_by_architecture
