@@ -53,7 +53,7 @@ def findOptimalWallet(wallets, keyCount, keyStateProbabilities):
     return best_wallets, best_prob
 
 
-def generateKeyFaultProbabilityScenarios(step=0.05, include_zero=False, min_safe=0.5, max_theft=0.5):
+def generateKeyFaultProbabilityScenarios(step=0.05, include_zero=True, min_safe=0.5, max_theft=0.5):
     """Generate probability scenarios on an exact integer grid that sum to 1.
 
     - step: grid granularity (e.g., 0.5, 0.25, 0.2, 0.1)
@@ -109,9 +109,14 @@ def generateKeyFaultProbabilityScenarios(step=0.05, include_zero=False, min_safe
                 p_leaked = c / n
                 p_stolen = d / n
 
+                # Enforce positivity constraints if requested
                 if not include_zero and (
                     p_safe == 0.0 or p_lost == 0.0 or p_leaked == 0.0 or p_stolen == 0.0
                 ):
+                    continue
+
+                # Additional constraint: only keep scenarios where SAFE > STOLEN
+                if p_safe <= p_stolen:
                     continue
 
                 scenarios.append(
