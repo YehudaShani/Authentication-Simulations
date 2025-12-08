@@ -7,11 +7,11 @@ def main():
     # Configuration
     keyCount = 4
     num_probabilities = 100000
-    step = 0.01  # Small step to generate many scenarios
+    step = 0.0001  # Small step to generate many scenarios
     min_safe = 0.1
     deduplicate_by_architecture = True
     num_workers = None  # None = auto-detect CPU cores, or set to specific number
-    batch_size = 100  # Number of scenarios per worker batch
+    batch_size = 1000  # Number of scenarios per worker batch
     
     print(f"Generating {num_probabilities} probability scenarios...")
     print(f"  step={step}, min_safe={min_safe}, keyCount={keyCount}")

@@ -39,7 +39,7 @@ def count_optimal_wallet_occurrences_parallel(
         output_csv_path=None,
         print_results=True,
         num_workers=None,
-        batch_size=100,
+        batch_size=1000,
 ):
     """Parallel CPU version of count_optimal_wallet_occurrences.
     
