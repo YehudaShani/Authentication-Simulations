@@ -1,4 +1,4 @@
-from experiments.experiment_optimal_wallets import count_optimal_wallet_occurrences
+from experiments.experiment_optimal_wallets_parallel import count_optimal_wallet_occurrences_parallel
 from helpers.computations import generateKeyFaultProbabilityScenarios
 from helpers.wallet_enumerations import enumerateStaticWallets
 
@@ -10,6 +10,8 @@ def main():
     step = 0.01  # Small step to generate many scenarios
     min_safe = 0.1
     deduplicate_by_architecture = True
+    num_workers = None  # None = auto-detect CPU cores, or set to specific number
+    batch_size = 100  # Number of scenarios per worker batch
     
     print(f"Generating {num_probabilities} probability scenarios...")
     print(f"  step={step}, min_safe={min_safe}, keyCount={keyCount}")
@@ -33,14 +35,16 @@ def main():
     )
     print(f"Generated {len(wallets)} wallets")
     
-    # Count optimal wallet occurrences
-    print("\nCounting optimal wallet occurrences...")
-    results = count_optimal_wallet_occurrences(
+    # Count optimal wallet occurrences (parallel CPU version)
+    print("\nCounting optimal wallet occurrences (parallel CPU)...")
+    results = count_optimal_wallet_occurrences_parallel(
         probabilities_list=probabilities_list,
         wallets=wallets,
         keyCount=keyCount,
         output_csv_path="optimal_wallet_occurrences_100000.csv",
-        print_results=True
+        print_results=True,
+        num_workers=num_workers,
+        batch_size=batch_size
     )
     
     print(f"\nAnalysis complete! Results saved to optimal_wallet_occurrences_100000.csv")
