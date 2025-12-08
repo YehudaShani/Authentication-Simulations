@@ -1,0 +1,6 @@
+numpy>=1.20.0
+cupy-cuda11x>=11.0.0; sys_platform != 'win32'  # For Linux/Mac with CUDA 11.x
+cupy-cuda12x>=12.0.0; sys_platform != 'win32'  # For Linux/Mac with CUDA 12.x
+# For Windows, install CuPy manually: pip install cupy-cuda11x or cupy-cuda12x
+# Or use conda: conda install -c conda-forge cupy
+
