@@ -1,4 +1,4 @@
-import pandas as pd
+import csv
 from helpers.computations import findOptimalWallet
 from helpers.wallet_enumerations import enumerateStaticWallets, SAFE, LOST, LEAKED, STOLEN, walletStrAscii
 
@@ -107,22 +107,56 @@ for case_idx, case in enumerate(cases):
             'Best_Probability': ''
         })
 
-# Create DataFrame and save to Excel
+# Save to Excel using openpyxl
 try:
-    df = pd.DataFrame(results)
+    from openpyxl import Workbook
+    
+    wb = Workbook()
+    ws = wb.active
+    
+    # Define column headers
+    headers = ['Case', 'SAFE', 'LOST', 'LEAKED', 'STOLEN', 'Key_Count', 'Optimal_Wallets', 'Best_Probability']
+    ws.append(headers)
+    
+    # Write data rows
+    for result in results:
+        row = [
+            result['Case'],
+            result['SAFE'],
+            result['LOST'],
+            result['LEAKED'],
+            result['STOLEN'],
+            result['Key_Count'],
+            result['Optimal_Wallets'],
+            result['Best_Probability']
+        ]
+        ws.append(row)
+    
     output_file = 'optimal_wallets_results.xlsx'
-    df.to_excel(output_file, index=False, engine='openpyxl')
+    wb.save(output_file)
     print(f"\nResults saved to {output_file}")
-    print(f"Total rows: {len(df)}")
-except ImportError as e:
-    print(f"\nError: {e}")
-    print("Please install openpyxl: pip install openpyxl")
+    print(f"Total rows: {len(results)}")
+    
+except ImportError:
     # Fallback: save as CSV
     output_file = 'optimal_wallets_results_up_to_6_keys.csv'
-    df = pd.DataFrame(results)
-    df.to_csv(output_file, index=False)
-    print(f"Results saved to {output_file} instead (CSV format)")
+    with open(output_file, 'w', newline='', encoding='utf-8') as f:
+        fieldnames = ['Case', 'SAFE', 'LOST', 'LEAKED', 'STOLEN', 'Key_Count', 'Optimal_Wallets', 'Best_Probability']
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(results)
+    print(f"\nResults saved to {output_file} (CSV format)")
+    print(f"Total rows: {len(results)}")
+    print("Note: Install openpyxl (pip install openpyxl) to save as Excel format")
 except Exception as e:
     print(f"\nError saving to Excel: {e}")
     import traceback
     traceback.print_exc()
+    # Fallback to CSV
+    output_file = 'optimal_wallets_results_up_to_6_keys.csv'
+    with open(output_file, 'w', newline='', encoding='utf-8') as f:
+        fieldnames = ['Case', 'SAFE', 'LOST', 'LEAKED', 'STOLEN', 'Key_Count', 'Optimal_Wallets', 'Best_Probability']
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(results)
+    print(f"Results saved to {output_file} (CSV format) as fallback")
