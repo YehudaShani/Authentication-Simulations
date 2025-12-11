@@ -66,7 +66,7 @@ cases = [
 ]
 
 
-key_counts = [2, 3, 4, 5, 6]
+key_counts = [2, 3, 4, 5]
 # Use a dictionary to map key_count to wallets
 wallets = {key_count: enumerateStaticWallets(key_count) for key_count in key_counts}
 
