@@ -17,7 +17,7 @@ def isCovered(keyCombination, wallet):
 
 
 # Build all possible static wallets for keyCount keys
-def enumerateStaticWallets(keyCount, deduplicate_by_architecture=False):
+def enumerateStaticWallets(keyCount, deduplicate_by_architecture=True):
     # All possible key combinations (from 001, 010, 011, ..., 111)
     wallets = enumerateStaticSubWallets(baseWallet=[], prevCombi=0, keyCount=keyCount)
     if deduplicate_by_architecture:
@@ -169,12 +169,128 @@ def deduplicateWalletsByArchitecture(wallets, keyCount):
             unique.append(wallet)
     return unique
 
+def stateStr(state):
+    """Convert a state list to a readable string format.
+    
+    Args:
+        state: list of key states (SAFE/LOST/LEAKED/STOLEN)
+    
+    Returns:
+        String representation like "[Safe, Loss, Leak, Theft]"
+    """
+    state_names = {
+        SAFE: "Safe",
+        LOST: "Loss",
+        LEAKED: "Leak",
+        STOLEN: "Theft"
+    }
+    state_strings = [state_names[key_state] for key_state in state]
+    return "[" + ", ".join(state_strings) + "]"
+
+def walletDifferingScenarios(wallet1, wallet2, keyCount, keyStateProbabilities1=None, keyStateProbabilities2=None):
+    """Return the scenarios (states) in which two wallets have different outcomes.
+
+    A wallet succeeds in a scenario when: owner can access AND adversary cannot access.
+    Two wallets differ in a scenario if one succeeds and the other doesn't.
+
+    Args:
+        wallet1: first wallet (list of bitmask combinations)
+        wallet2: second wallet (list of bitmask combinations)
+        keyCount: number of keys in the system
+        keyStateProbabilities1: probability dictionary for evaluating wallet1 (default: equal probabilities)
+        keyStateProbabilities2: probability dictionary for evaluating wallet2 (default: same as keyStateProbabilities1)
+
+    Returns:
+        Tuple of two lists:
+        - First list: scenarios where wallet1 succeeds but wallet2 fails
+        - Second list: scenarios where wallet2 succeeds but wallet1 fails
+        Each state vector is a list of key states (SAFE/LOST/LEAKED/STOLEN) for each key.
+    """
+    # Use default probabilities if not provided
+    if keyStateProbabilities1 is None:
+        keyStateProbabilities1 = {SAFE: 0.25, LOST: 0.25, LEAKED: 0.25, STOLEN: 0.25}
+    if keyStateProbabilities2 is None:
+        keyStateProbabilities2 = keyStateProbabilities1
+    
+    # Generate all possible states and their probabilities for each wallet
+    # Note: states will be the same regardless of probabilities, only probabilities differ
+    states1, probabilities1 = enumerateStates(keyCount, keyStateProbabilities1)
+    states2, probabilities2 = enumerateStates(keyCount, keyStateProbabilities2)
+    ownerStates1, advStates1 = ownerAdvKeysFromStates(states1)
+    ownerStates2, advStates2 = ownerAdvKeysFromStates(states2)
+
+    wallet1_succeeds = []
+    wallet2_succeeds = []
+    wallet1_total_prob = 0.0
+    wallet2_total_prob = 0.0
+    
+    # Print header
+    print("=" * 80)
+    print("Scenarios where wallets differ:")
+    print("=" * 80)
+    print(f"\nScenarios where wallet1 succeeds but wallet2 fails:")
+    print("-" * 80)
+    
+    # Iterate once through all states
+    for i, state in enumerate(states1):
+        # Check if wallet1 succeeds in this scenario
+        owner_ok1 = isCovered(ownerStates1[i], wallet1)
+        adv_ok1 = isCovered(advStates1[i], wallet1)
+        success1 = owner_ok1 and not adv_ok1
+        if success1:
+            wallet1_total_prob += probabilities1[i]
+
+        # Check if wallet2 succeeds in this scenario (using same state index)
+        owner_ok2 = isCovered(ownerStates2[i], wallet2)
+        adv_ok2 = isCovered(advStates2[i], wallet2)
+        success2 = owner_ok2 and not adv_ok2
+        if success2:
+            wallet2_total_prob += probabilities2[i]
+
+        # Separate scenarios where one succeeds and the other fails
+        if success1 and not success2:
+            wallet1_succeeds.append((state, probabilities1[i]))
+        elif success2 and not success1:
+            wallet2_succeeds.append((state, probabilities2[i]))
+    
+    # Sort by probability (descending - highest probability first)
+    wallet1_succeeds.sort(key=lambda x: x[1], reverse=True)
+    wallet2_succeeds.sort(key=lambda x: x[1], reverse=True)
+    
+    # Print wallet1 scenarios
+    for state, prob in wallet1_succeeds:
+        print(f"  State: {stateStr(state)}, Probability: {prob:.6f}")
+    
+    print(f"\nScenarios where wallet2 succeeds but wallet1 fails:")
+    print("-" * 80)
+    for state, prob in wallet2_succeeds:
+        print(f"  State: {stateStr(state)}, Probability: {prob:.6f}")
+    
+    # Print summary
+    print("\n" + "=" * 80)
+    print("Summary:")
+    print("-" * 80)
+    print(f"Wallet1 total success probability: {wallet1_total_prob:.6f}")
+    print(f"Wallet2 total success probability: {wallet2_total_prob:.6f}")
+    print(f"Difference (wallet1 - wallet2): {wallet1_total_prob - wallet2_total_prob:.6f}")
+    print("=" * 80)
+    
+    # Return just the states (without probabilities) for backward compatibility
+    return [state for state, _ in wallet1_succeeds], [state for state, _ in wallet2_succeeds]
 
 
 if __name__ == "__main__":
-    # Test enumerateStaticWallets
-    keyCount = 3
-    wallets = enumerateStaticWallets(keyCount, deduplicate_by_architecture=True)
-    print(f"There are {len(wallets)} combinations of wallet for {keyCount} keys:")
-    for wallet in wallets:
-        print(walletStr(wallet))
+    # Test walletDifferingScenarios
+    keyCount = 4
+    wallet_1 = [5,3,6]
+    wallet_2 = [5,3,9,14]
+    
+    # Define probability distributions (can be different for each wallet)
+    probs1 = {SAFE: 0.5, LOST: 0.3, LEAKED: 0.1, STOLEN: 0.1}
+    probs2 = probs1
+    
+    wallet1_succeeds, wallet2_succeeds = walletDifferingScenarios(
+        wallet_1, wallet_2, keyCount, 
+        keyStateProbabilities1=probs1, 
+        keyStateProbabilities2=probs2
+    )
